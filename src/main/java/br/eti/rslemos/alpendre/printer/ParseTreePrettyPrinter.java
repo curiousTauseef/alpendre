@@ -25,6 +25,7 @@ import java.io.PrintStream;
 
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 public class ParseTreePrettyPrinter {
@@ -49,17 +50,52 @@ public class ParseTreePrettyPrinter {
 	
 	private final PrintStream out;
 	private final Parser parser;
-	
 
+	private String positionFormat;
+	private String positionEmpty;
+	
 	public ParseTreePrettyPrinter(PrintStream out, Parser parser) {
 		this.out = out;
 		this.parser = parser;
 	}
 
 	public void printTree(ParseTree node) {
+		// sweep tree to discover
+		int lineWidth = 5;
+		int columnWidth = 3; 
+		
+		positionFormat = "(%" + lineWidth + "d:%" + columnWidth + "d) ";
+		positionEmpty = String.format(" %" + lineWidth + "s %" + columnWidth + "s  ", "", "");
+		
+		printPosition(node);
 		printTree("", node);
 	}
 	
+	private void printPosition(ParseTree node) {
+		Token token = getFirstTerminal(node);
+		if (token != null) {
+			int line = token.getLine();
+			int column = token.getCharPositionInLine();
+			out.printf(positionFormat, line, column);
+		} else
+			out.print(positionEmpty);
+	}
+
+	private Token getFirstTerminal(ParseTree node) {
+		try {
+			if (node.getChildCount() == 0)
+				return (Token)node.getPayload();
+		} catch (ClassCastException e) {}
+		
+		for (int i = 0; i < node.getChildCount(); i++) {
+			try {
+				return getFirstTerminal(node.getChild(i));
+			} catch (ClassCastException e) {}
+		}
+		
+		return null;
+	}
+
 	private void printTree(String prefix, ParseTree node) {
 		if (node instanceof RuleContext)
 			printNT(prefix, (RuleContext)node);
@@ -84,6 +120,7 @@ public class ParseTreePrettyPrinter {
 				out.print(rule);
 				out.println(model[0][3]);
 				
+				out.print(positionEmpty);
 				out.print(prefix);
 				out.print(model[1][0]);
 				out.print(model[1][1]);
@@ -92,10 +129,12 @@ public class ParseTreePrettyPrinter {
 
 				int i;
 				for (i = 0; i < node.getChildCount()-1; i++) {
+					printPosition(node.getChild(i));
 					String newPrefix = printPrefix(prefix, false);
 					printTree(newPrefix, node.getChild(i));
 				}
 					
+				printPosition(node.getChild(i));
 				String newPrefix = printPrefix(prefix, true);
 				printTree(newPrefix, node.getChild(i));
 				
