@@ -23,7 +23,6 @@ package br.eti.rslemos.alpendre.printer;
 
 import java.io.PrintStream;
 import java.util.Arrays;
-import java.util.List;
 import java.util.regex.Pattern;
 
 import org.antlr.v4.runtime.Token;
@@ -90,7 +89,7 @@ public class TokenPrettyPrinter {
 		RIGHT_HEADER_DIVISION = model[2][3];
 	}
 
-	public void printTokens(List<? extends Token> tokens) {
+	public void printTokens(Iterable<? extends Token> tokens) {
 		Printer p = new Printer(computeWidths(tokens));
 
 		String[] strings = new String[channelNames.length + 4];
@@ -107,10 +106,12 @@ public class TokenPrettyPrinter {
 		p.printBorder(LEFT_HEADER_DIVISION, HORIZONTAL, MIDDLE_FIELD_DIVISION, RIGHT_HEADER_DIVISION);
 
 		Arrays.fill(strings, "");
-		for (int i = 0; i < tokens.size(); i++) {
-			Token token = tokens.get(i);
-			
-			strings[0] = p.rightAlign(0, Integer.toString(i+1));
+
+		int i = 0;
+		for (Token token : tokens) {
+			i++;
+
+			strings[0] = p.rightAlign(0, Integer.toString(i));
 			strings[1] = p.rightAlign(1, Integer.toString(token.getLine()));
 			strings[2] = p.rightAlign(2, Integer.toString(token.getCharPositionInLine()));
 			
@@ -177,7 +178,7 @@ public class TokenPrettyPrinter {
 		}
 	}
 		
-	private int[] computeWidths(List<? extends Token> tokens) {
+	private int[] computeWidths(Iterable<? extends Token> tokens) {
 		int[] widths = new int[8];
 		
 		int maxLine = 100;
@@ -188,11 +189,10 @@ public class TokenPrettyPrinter {
 		
 		widths[widths.length - 1] = "TEXT".length();
 		
-		int size = tokens.size();
-		
-		for (int i = 0; i < size; i++) {
-			Token token = tokens.get(i);
-			
+		int size = 0;
+		for (Token token : tokens) {
+			size++;
+
 			int line = token.getLine();
 			if (line > maxLine)
 				maxLine = line;
@@ -216,7 +216,7 @@ public class TokenPrettyPrinter {
 				widths[widths.length -1] = textLength;
 		}
 
-		widths[0] = Integer.toString(size+1).length();
+		widths[0] = Integer.toString(size).length();
 		widths[1] = Integer.toString(maxLine).length();
 		widths[2] = Integer.toString(maxColumn).length();
 		
