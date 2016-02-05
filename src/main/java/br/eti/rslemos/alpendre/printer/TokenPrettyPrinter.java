@@ -23,6 +23,7 @@ package br.eti.rslemos.alpendre.printer;
 
 import java.io.PrintStream;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import org.antlr.v4.runtime.Token;
@@ -89,38 +90,56 @@ public class TokenPrettyPrinter {
 		RIGHT_HEADER_DIVISION = model[2][3];
 	}
 
-	public void printTokens(Iterable<? extends Token> tokens) {
-		Printer p = new Printer(computeWidths(tokens));
+	public void printTokens(final Iterable<? extends Token> tokens) {
+		Iterable<String[]> rows = new Iterable<String[]>() {
+			@Override public Iterator<String[]> iterator() {
+				final Iterator<? extends Token> it = tokens.iterator();
+				final String[] strings = new String[channelNames.length + 4];
+				
+				return new Iterator<String[]>() {
+					private int i;
 
-		String[] strings = new String[channelNames.length + 4];
+					@Override public boolean hasNext() { return it.hasNext(); }
+					@Override public void remove() { it.remove(); }
+
+					@Override public String[] next() {
+						Token token = it.next();
+						
+						strings[0] = Integer.toString(++i);
+						strings[1] = Integer.toString(token.getLine());
+						strings[2] = Integer.toString(token.getCharPositionInLine());
+						
+						for (int j = 0; j < channelMap.length; j++)
+							strings[3 + j] = channelMap[token.getChannel()] == j ? getDisplayName(token) : "";
+							
+						strings[strings.length - 1] = getText(token);
+						
+						return strings;
+					}
+				};
+			}
+		};
+
+		String[] header = new String[channelNames.length + 4];
 		
-		strings[0] = "#";
-		strings[1] = "lin";
-		strings[2] = "col";
-		System.arraycopy(channelNames, 0, strings, 3, channelNames.length);
-		
-		strings[strings.length - 1] = "text";
+		header[0] = "#";
+		header[1] = "lin";
+		header[2] = "col";
+		System.arraycopy(channelNames, 0, header, 3, channelNames.length);
+		header[header.length - 1] = "text";
+
+		Printer p = new Printer(computeWidths(header, rows));
 		
 		p.printBorder(TOPLEFT_CORNER, HORIZONTAL, TOP_FIELD_DIVISION, TOPRIGHT_CORNER);
-		p.printStrings(strings);
+		p.printStrings(header);
 		p.printBorder(LEFT_HEADER_DIVISION, HORIZONTAL, MIDDLE_FIELD_DIVISION, RIGHT_HEADER_DIVISION);
 
-		Arrays.fill(strings, "");
-
-		int i = 0;
-		for (Token token : tokens) {
-			i++;
-
-			strings[0] = p.rightAlign(0, Integer.toString(i));
-			strings[1] = p.rightAlign(1, Integer.toString(token.getLine()));
-			strings[2] = p.rightAlign(2, Integer.toString(token.getCharPositionInLine()));
+		for (String[] row : rows) {
+			row[0] = p.rightAlign(0, row[0]);
+			row[1] = p.rightAlign(1, row[1]);
+			row[2] = p.rightAlign(2, row[2]);
 			
-			for (int j = 0; j < channelMap.length; j++)
-				strings[3 + j] = channelMap[token.getChannel()] == j ? getDisplayName(token) : "";
-				
-			strings[strings.length - 1] = getText(token);
-			
-			p.printStrings(strings);
+			p.printStrings(row);
 		}
 
 		p.printBorder(BOTTOMLEFT_CORNER, HORIZONTAL, BOTTOM_FIELD_DIVISION, BOTTOMRIGHT_CORNER);
@@ -178,48 +197,17 @@ public class TokenPrettyPrinter {
 		}
 	}
 		
-	private int[] computeWidths(Iterable<? extends Token> tokens) {
+	private int[] computeWidths(String[] header, Iterable<String[]> rows) {
 		int[] widths = new int[8];
 		
-		int maxLine = 100;
-		int maxColumn = 100;
+		for (int i = 0; i < widths.length; i++)
+			widths[i] = header[i].length();
 		
-		for (int i = 0; i < channelNames.length; i++)
-			widths[i+3] = channelNames[i].length();
-		
-		widths[widths.length - 1] = "TEXT".length();
-		
-		int size = 0;
-		for (Token token : tokens) {
-			size++;
+		for (String[] row : rows)
+			for (int i = 0; i < widths.length; i++)
+				if (widths[i] < row[i].length())
+					widths[i] = row[i].length();
 
-			int line = token.getLine();
-			if (line > maxLine)
-				maxLine = line;
-			
-			int column = token.getCharPositionInLine();
-			if (column > maxColumn)
-				maxColumn = column;
-			
-			int channel = channelMap[token.getChannel()];
-			if (channel >= 0 && channel < channelMap.length) {
-				String displayName = getDisplayName(token);
-				int displayNameLength = displayName.length();
-				
-				if (displayNameLength > widths[3+channel])
-					widths[3+channel] = displayNameLength;
-			}
-			
-			String text = getText(token);
-			int textLength = text.length();
-			if (textLength > widths[widths.length -1])
-				widths[widths.length -1] = textLength;
-		}
-
-		widths[0] = Integer.toString(size).length();
-		widths[1] = Integer.toString(maxLine).length();
-		widths[2] = Integer.toString(maxColumn).length();
-		
 		return widths;
 	}
 
