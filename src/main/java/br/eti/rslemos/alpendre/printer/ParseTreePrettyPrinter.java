@@ -23,7 +23,6 @@ package br.eti.rslemos.alpendre.printer;
 
 import java.io.PrintStream;
 
-import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.RuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -49,14 +48,14 @@ public class ParseTreePrettyPrinter {
 //			};
 	
 	private final PrintStream out;
-	private final Parser parser;
+	private final String[] ruleNames;
 
 	private String positionFormat;
 	private String positionEmpty;
 	
-	public ParseTreePrettyPrinter(PrintStream out, Parser parser) {
+	public ParseTreePrettyPrinter(PrintStream out, String[] ruleNames) {
 		this.out = out;
-		this.parser = parser;
+		this.ruleNames = ruleNames;
 	}
 
 	public void printTree(ParseTree node) {
@@ -109,7 +108,7 @@ public class ParseTreePrettyPrinter {
 	}
 
 	private void printNT(String prefix, RuleContext node) {
-		String rule = parser.getRuleNames()[node.getRuleIndex()];
+		String rule = ruleNames[node.getRuleIndex()];
 		
 		int ntChildren = countNonTerminalChildren(node);
 		
