@@ -198,7 +198,7 @@ public class TokenPrettyPrinter {
 	}
 		
 	private int[] computeWidths(String[] header, Iterable<String[]> rows) {
-		int[] widths = new int[8];
+		int[] widths = new int[header.length];
 		
 		for (int i = 0; i < widths.length; i++)
 			widths[i] = header[i].length();
