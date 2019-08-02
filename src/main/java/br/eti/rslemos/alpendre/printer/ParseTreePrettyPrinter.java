@@ -52,6 +52,14 @@ public class ParseTreePrettyPrinter {
 
 	private String positionFormat;
 	private String positionEmpty;
+
+	public enum ConfigTreeInline {
+		ALWAYS,
+		ONLY_DIRECT_LINE,
+		NEVER,
+	}
+
+	public ConfigTreeInline configTreeInline = ConfigTreeInline.ALWAYS;
 	
 	public ParseTreePrettyPrinter(PrintStream out, String[] ruleNames) {
 		this.out = out;
@@ -107,6 +115,16 @@ public class ParseTreePrettyPrinter {
 		out.println(node.getText());
 	}
 
+	private boolean isDirectLine(RuleContext node) {
+		if (node.getChildCount() == 1) {
+			ParseTree child = node.getChild(0);
+
+			return !(child instanceof RuleContext) || isDirectLine((RuleContext)child);
+		}
+		
+		return node.getChildCount() == 0;
+	}
+
 	private void printNT(String prefix, RuleContext node) {
 		String rule = ruleNames[node.getRuleIndex()];
 		
@@ -114,7 +132,9 @@ public class ParseTreePrettyPrinter {
 		
 		if (ntChildren > 0) {
 			
-			if (node.getChildCount() > 1) {
+			if (configTreeInline == ConfigTreeInline.NEVER || node.getChildCount() > 1 || 
+				(configTreeInline == ConfigTreeInline.ONLY_DIRECT_LINE && !isDirectLine(node))
+			) {
 				out.print(model[0][0]);
 				out.print(rule);
 				out.println(model[0][3]);
