@@ -21,7 +21,10 @@
  ******************************************************************************/
 package br.eti.rslemos.alpendre.printer;
 
+import java.lang.reflect.Field;
 import java.io.PrintStream;
+import java.util.Map;
+import java.util.IdentityHashMap;
 
 import org.antlr.v4.runtime.RuleContext;
 import org.antlr.v4.runtime.Token;
@@ -103,11 +106,23 @@ public class ParseTreePrettyPrinter {
 		return null;
 	}
 
+	private void printTree(String prefix, String label, ParseTree node) {
+		if (node instanceof RuleContext)
+			printNT(prefix, label, (RuleContext)node);
+		else
+			printT(label, node);
+	}
+
 	private void printTree(String prefix, ParseTree node) {
 		if (node instanceof RuleContext)
 			printNT(prefix, (RuleContext)node);
 		else
 			printT(node);
+	}
+
+	private void printT(String label, ParseTree node) {
+		out.print(model[4][2]);
+		out.println(label + "=" + node.getText());
 	}
 
 	private void printT(ParseTree node) {
@@ -126,9 +141,16 @@ public class ParseTreePrettyPrinter {
 	}
 
 	private void printNT(String prefix, RuleContext node) {
+		printNT(prefix, null, node);
+	}
+
+	private void printNT(String prefix, String label, RuleContext node) {
 		String rule = ruleNames[node.getRuleIndex()];
+		if (label != null)
+			rule = label + "=" + rule;
 		
 		int ntChildren = countNonTerminalChildren(node);
+		Map<Object, String> labels = getLabels(node);
 		
 		if (ntChildren > 0) {
 			
@@ -150,7 +172,11 @@ public class ParseTreePrettyPrinter {
 				for (i = 0; i < node.getChildCount()-1; i++) {
 					printPosition(node.getChild(i));
 					String newPrefix = printPrefix(prefix, false);
-					printTree(newPrefix, node.getChild(i));
+					ParseTree child = node.getChild(i);
+					if (labels.containsKey(child))
+						printTree(newPrefix, labels.get(child), child);
+					else
+						printTree(newPrefix, child);
 				}
 					
 				printPosition(node.getChild(i));
@@ -164,7 +190,11 @@ public class ParseTreePrettyPrinter {
 				out.print(model[3][3]);
 				
 				String newPrefix = prefix + TokenPrettyPrinter.repeat(' ', rule.length()+2);
-				printTree(newPrefix, node.getChild(0));
+				ParseTree child = node.getChild(0);
+				if (labels.containsKey(child))
+					printTree(newPrefix, labels.get(child), child);
+				else
+					printTree(newPrefix, child);
 			}
 		} else {
 			out.print(model[4][2]);
@@ -203,4 +233,24 @@ public class ParseTreePrettyPrinter {
 		return childRuleCount;
 	}
 
+	private Map<Object, String> getLabels(ParseTree node) {
+		try {
+			Map<Object, String> result = new IdentityHashMap<Object, String>();
+
+			Field[] fields = node.getClass().getDeclaredFields();
+			for (Field field : fields) {
+				Object value = field.get(node);
+				if (value != null)
+					result.put(value, field.getName());
+			}
+
+			return result;
+		} catch (IllegalArgumentException e) {
+			throw new RuntimeException(e);
+		} catch (IllegalAccessException e) {
+			throw new RuntimeException(e);
+		} catch (SecurityException e) {
+			throw new RuntimeException(e);
+		}
+	}
 }
